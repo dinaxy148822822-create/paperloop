@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ["3.9", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install Xvfb (real X server for the X11 backend test)
+        run: sudo apt-get update && sudo apt-get install -y xvfb
+      - name: Tests
+        run: python -m unittest discover -s tests -t . -v
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Portable tests
+        run: python -m unittest tests.test_logic tests.test_web_and_x11 tests.test_backends -v
+      - name: Windows API smoke test (informational)
+        continue-on-error: true
+        run: >
+          python -c "
+          from paperloop.backends import windows as w;
+          from paperloop import sensors;
+          print('monitors:', w.list_monitors());
+          print('workerw:', w.find_workerw());
+          print('foreground:', sensors.foreground('windows'));
+          print('on battery:', sensors.on_battery())"

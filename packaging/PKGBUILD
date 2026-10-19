@@ -1,0 +1,29 @@
+# Maintainer: Paperloop contributors
+pkgname=paperloop
+pkgver=0.1.0
+pkgrel=1
+pkgdesc="Free live wallpapers for Linux (X11, Hyprland, Sway, KDE Plasma) using mpv"
+arch=('any')
+url="https://github.com/dinaxy148822822-create/paperloop"
+license=('MIT')
+depends=('python' 'mpv')
+makedepends=('python-build' 'python-installer' 'python-setuptools' 'python-wheel')
+optdepends=('xorg-xprop: fullscreen detection on X11'
+            'mpvpaper: Hyprland / Sway support'
+            'qt6-tools: KDE Plasma Wayland support'
+            'python-pystray: tray icon'
+            'python-pillow: tray icon'
+            'ffmpeg: video thumbnails in the web UI')
+source=("$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/v$pkgver.tar.gz")
+sha256sums=('SKIP')
+
+build() {
+  cd "$pkgname-$pkgver"
+  python -m build --wheel --no-isolation
+}
+
+package() {
+  cd "$pkgname-$pkgver"
+  python -m installer --destdir="$pkgdir" dist/*.whl
+  install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}

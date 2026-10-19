@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "paperloop"
+version = "0.1.0"
+description = "Free, open-source live wallpapers for Windows 10/11 and Linux (X11, Hyprland, Sway, KDE Plasma)."
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.9"
+dependencies = []
+keywords = ["wallpaper", "live-wallpaper", "mpv", "desktop"]
+classifiers = [
+  "Environment :: X11 Applications",
+  "Environment :: Win32 (MS Windows)",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: Microsoft :: Windows :: Windows 10",
+  "Operating System :: Microsoft :: Windows :: Windows 11",
+  "Operating System :: POSIX :: Linux",
+  "Programming Language :: Python :: 3",
+]
+
+[project.optional-dependencies]
+tray = ["pystray>=0.19", "Pillow>=10"]
+
+[project.scripts]
+paperloop = "paperloop.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/dinaxy148822822-create/paperloop"
+Issues = "https://github.com/dinaxy148822822-create/paperloop/issues"
+
+[tool.setuptools.packages.find]
+include = ["paperloop*"]
+namespaces = false
+
+[tool.setuptools.package-data]
+paperloop = ["web/*", "kde/*/*", "kde/*/contents/*/*"]

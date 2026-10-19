@@ -1,0 +1,14 @@
+{
+    "KPackageStructure": "Plasma/Wallpaper",
+    "KPlugin": {
+        "Authors": [{ "Name": "Paperloop contributors" }],
+        "Category": "",
+        "Description": "Plays a video as the desktop wallpaper. Driven by the paperloop daemon.",
+        "Icon": "video-x-generic",
+        "Id": "org.paperloop.video",
+        "License": "MIT",
+        "Name": "Paperloop Video",
+        "Version": "0.1.0",
+        "Website": "https://github.com/dinaxy148822822-create/paperloop"
+    }
+}

@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Paperloop</title>
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<style>
+  :root { --bg:#12141a; --panel:#1b1e27; --line:#2a2e3a; --text:#e8eaf0; --dim:#8a90a2; --accent:#6ea8ff; --ok:#5ed18a; --warn:#ffb454; }
+  @media (prefers-color-scheme: light) { :root { --bg:#f4f5f8; --panel:#fff; --line:#dde0e8; --text:#1b1e27; --dim:#6a7080; --accent:#2f6fe0; } }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  header { display:flex; align-items:center; gap:12px; padding:14px 20px; border-bottom:1px solid var(--line); background:var(--panel); position:sticky; top:0; z-index:2; }
+  header img { width:26px; height:26px; }
+  header h1 { font-size:17px; margin:0; font-weight:650; }
+  .spacer { flex:1; }
+  .pill { font-size:12.5px; padding:3px 10px; border-radius:99px; border:1px solid var(--line); color:var(--dim); }
+  .pill.ok { color:var(--ok); border-color:var(--ok); } .pill.warn { color:var(--warn); border-color:var(--warn); }
+  main { display:grid; grid-template-columns: 1fr 320px; gap:20px; padding:20px; max-width:1300px; margin:0 auto; }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
+  h2 { font-size:13px; letter-spacing:.06em; text-transform:uppercase; color:var(--dim); margin:0 0 10px; font-weight:600; }
+  .grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap:12px; }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:10px; overflow:hidden; cursor:pointer; position:relative; }
+  .card:hover { border-color:var(--accent); } .card.active { border-color:var(--ok); box-shadow:0 0 0 1px var(--ok); }
+  .thumb { aspect-ratio:16/9; background:#0b0c10 center/cover no-repeat; display:flex; align-items:center; justify-content:center; color:#555; font-size:12px; }
+  .meta { padding:8px 10px; display:flex; justify-content:space-between; gap:8px; align-items:center; }
+  .title { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-size:13.5px; }
+  .kind { font-size:11px; color:var(--dim); text-transform:uppercase; }
+  .add { position:absolute; top:6px; right:6px; background:rgba(0,0,0,.6); color:#fff; border:0; border-radius:6px; font-size:12px; padding:3px 7px; cursor:pointer; }
+  aside .box { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:14px; margin-bottom:14px; }
+  label { display:flex; align-items:center; gap:8px; margin:7px 0; font-size:14px; }
+  input[type=text], input[type=number], select { width:100%; background:var(--bg); color:var(--text); border:1px solid var(--line); border-radius:7px; padding:7px 9px; font:inherit; }
+  input[type=number] { width:90px; }
+  button { background:var(--accent); color:#fff; border:0; border-radius:7px; padding:7px 12px; font:inherit; cursor:pointer; }
+  button.ghost { background:transparent; color:var(--text); border:1px solid var(--line); }
+  .row { display:flex; gap:8px; flex-wrap:wrap; } .row > * { flex:0 0 auto; }
+  .dirs div { display:flex; justify-content:space-between; gap:8px; font-size:13px; color:var(--dim); margin:4px 0; word-break:break-all; }
+  .dirs a { cursor:pointer; color:var(--warn); }
+  .empty { color:var(--dim); padding:30px 0; }
+  .err { color:var(--warn); font-size:13px; margin-top:6px; }
+  small { color:var(--dim); }
+</style>
+</head>
+<body>
+<header>
+  <img src="/icon.svg" alt="">
+  <h1>Paperloop</h1>
+  <span id="backend" class="pill"></span>
+  <span id="state" class="pill"></span>
+  <div class="spacer"></div>
+  <button class="ghost" id="btnPause">Pause</button>
+  <button class="ghost" id="btnNext">Next</button>
+  <button class="ghost" id="btnStop">Stop</button>
+</header>
+<main>
+  <section>
+    <h2>Library</h2>
+    <div id="err" class="err"></div>
+    <div id="grid" class="grid"></div>
+    <div id="empty" class="empty" hidden>No wallpapers yet. Add a folder with videos or images on the right.</div>
+  </section>
+  <aside>
+    <div class="box dirs">
+      <h2>Folders</h2>
+      <div id="dirs"></div>
+      <div class="row" style="margin-top:8px"><input type="text" id="newDir" placeholder="/home/me/Videos/wallpapers" style="flex:1"><button id="btnAddDir">Add</button></div>
+    </div>
+    <div class="box">
+      <h2>Playback</h2>
+      <label><input type="checkbox" id="mute"> Mute audio</label>
+      <label>Fit
+        <select id="fit"><option value="fill">Fill (crop)</option><option value="fit">Fit (bars)</option><option value="stretch">Stretch</option></select>
+      </label>
+      <label>FPS cap <input type="number" id="fps" min="0" max="240"> <small>0 = off</small></label>
+    </div>
+    <div class="box">
+      <h2>Auto-pause</h2>
+      <label><input type="checkbox" id="pFull"> When an app is fullscreen</label>
+      <label><input type="checkbox" id="pMax"> When an app is maximized</label>
+      <label><input type="checkbox" id="pBat"> On battery</label>
+    </div>
+    <div class="box">
+      <h2>Playlist</h2>
+      <label><input type="checkbox" id="plOn"> Rotate wallpapers</label>
+      <label>Every <input type="number" id="plMin" min="1" max="1440"> min</label>
+      <label><input type="checkbox" id="plShuffle"> Shuffle</label>
+      <small>Uses the wallpapers you tick with “+ playlist”.</small>
+    </div>
+  </aside>
+</main>
+<script>
+const TOKEN = "__TOKEN__";
+let S = null;
+const $ = id => document.getElementById(id);
+async function api(path, body) {
+  const opt = { headers: { "X-Paperloop-Token": TOKEN } };
+  if (body !== undefined) { opt.method = "POST"; opt.body = JSON.stringify(body); opt.headers["Content-Type"] = "application/json"; }
+  const r = await fetch(path, opt);
+  if (!r.ok) { let m = r.statusText; try { m = (await r.json()).error || m; } catch (e) {} throw new Error(m); }
+  return r.json();
+}
+function esc(s) { return s.replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c])); }
+async function refresh() {
+  try { S = await api("/api/state"); render(); $("err").textContent = S.status.error || ""; }
+  catch (e) { $("err").textContent = "Cannot reach the Paperloop daemon: " + e.message; }
+}
+function render() {
+  const st = S.status, cfg = S.config;
+  $("backend").textContent = st.backend + " · " + st.session;
+  const pill = $("state");
+  pill.textContent = st.paused ? "paused" + (st.pause_reason ? " – " + st.pause_reason : "") : "playing";
+  pill.className = "pill " + (st.paused ? "warn" : "ok");
+  $("btnPause").textContent = st.user_paused ? "Resume" : "Pause";
+  const cur = st.assignments["*"] || Object.values(st.assignments)[0];
+  const inPl = new Set(cfg.playlist.items);
+  $("grid").innerHTML = S.wallpapers.map((w, i) => `
+    <div class="card ${w.path === cur ? "active" : ""}" data-i="${i}">
+      <div class="thumb" style="background-image:url('/api/thumb?t=${TOKEN}&path=${encodeURIComponent(w.path)}')">${w.kind}</div>
+      <div class="meta"><span class="title" title="${esc(w.path)}">${esc(w.title)}</span><span class="kind">${w.kind}</span></div>
+      <button class="add" data-pl="${i}">${inPl.has(w.path) ? "✓ playlist" : "+ playlist"}</button>
+    </div>`).join("");
+  $("empty").hidden = S.wallpapers.length > 0;
+  $("dirs").innerHTML = S.library_dirs.map((d, i) => `<div><span>${esc(d)}</span><a data-rm="${i}">remove</a></div>`).join("");
+  $("mute").checked = cfg.mute; $("fit").value = cfg.fit; $("fps").value = cfg.fps_cap;
+  $("pFull").checked = cfg.pause.on_fullscreen; $("pMax").checked = cfg.pause.on_maximized; $("pBat").checked = cfg.pause.on_battery;
+  $("plOn").checked = cfg.playlist.enabled; $("plMin").value = cfg.playlist.interval_minutes; $("plShuffle").checked = cfg.playlist.shuffle;
+}
+$("grid").addEventListener("click", async e => {
+  const pl = e.target.closest("[data-pl]");
+  if (pl) {
+    e.stopPropagation();
+    const w = S.wallpapers[+pl.dataset.pl], items = S.config.playlist.items.slice();
+    const at = items.indexOf(w.path);
+    if (at >= 0) items.splice(at, 1); else items.push(w.path);
+    await api("/api/config", { playlist: { items } }); return refresh();
+  }
+  const card = e.target.closest(".card");
+  if (card) { try { await api("/api/apply", { path: S.wallpapers[+card.dataset.i].path }); } catch (er) { $("err").textContent = er.message; } refresh(); }
+});
+$("dirs").addEventListener("click", async e => {
+  const rm = e.target.closest("[data-rm]");
+  if (rm) { await api("/api/library/remove", { dir: S.library_dirs[+rm.dataset.rm] }); refresh(); }
+});
+$("btnAddDir").onclick = async () => {
+  try { await api("/api/library/add", { dir: $("newDir").value.trim() }); $("newDir").value = ""; } catch (e) { $("err").textContent = e.message; }
+  refresh();
+};
+$("btnPause").onclick = async () => { await api("/api/pause", { paused: !S.status.user_paused }); refresh(); };
+$("btnNext").onclick = async () => { await api("/api/next", {}); refresh(); };
+$("btnStop").onclick = async () => { await api("/api/stop", {}); refresh(); };
+const save = patch => async () => { await api("/api/config", typeof patch === "function" ? patch() : patch); refresh(); };
+$("mute").onchange = save(() => ({ mute: $("mute").checked }));
+$("fit").onchange = save(() => ({ fit: $("fit").value }));
+$("fps").onchange = save(() => ({ fps_cap: Math.max(0, +$("fps").value || 0) }));
+$("pFull").onchange = save(() => ({ pause: { on_fullscreen: $("pFull").checked } }));
+$("pMax").onchange = save(() => ({ pause: { on_maximized: $("pMax").checked } }));
+$("pBat").onchange = save(() => ({ pause: { on_battery: $("pBat").checked } }));
+$("plOn").onchange = save(() => ({ playlist: { enabled: $("plOn").checked } }));
+$("plMin").onchange = save(() => ({ playlist: { interval_minutes: Math.max(1, +$("plMin").value || 15) } }));
+$("plShuffle").onchange = save(() => ({ playlist: { shuffle: $("plShuffle").checked } }));
+refresh(); setInterval(refresh, 4000);
+</script>
+</body>
+</html>

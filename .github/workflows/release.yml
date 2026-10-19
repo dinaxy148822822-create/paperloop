@@ -1,0 +1,75 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  python-package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install build
+      - run: python -m build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: python-package
+          path: dist/*
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install build tools
+        run: python -m pip install pyinstaller pystray pillow .
+      - name: Build executables
+        shell: pwsh
+        run: |
+          $data = @("--add-data", "paperloop/web;paperloop/web", "--add-data", "paperloop/kde;paperloop/kde",
+                    "--hidden-import", "pystray._win32")
+          pyinstaller --noconfirm --onefile --noconsole --name paperloop @data packaging/paperloop_entry.py
+          pyinstaller --noconfirm --onefile --console --name paperloop-cli @data packaging/paperloop_entry.py
+      - name: Bundle mpv (best effort)
+        continue-on-error: true
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $rel = gh api repos/shinchiro/mpv-winbuild-cmake/releases/latest | ConvertFrom-Json
+          $asset = $rel.assets | Where-Object { $_.name -match '^mpv-x86_64-\d{8}-git-.*\.7z$' } | Select-Object -First 1
+          if (-not $asset) { throw "no mpv asset found" }
+          Invoke-WebRequest $asset.browser_download_url -OutFile mpv.7z
+          7z x mpv.7z -ompv-extract -y | Out-Null
+          New-Item -ItemType Directory -Force dist/mpv | Out-Null
+          Copy-Item mpv-extract/* dist/mpv -Recurse
+      - name: Zip
+        shell: pwsh
+        run: |
+          Copy-Item README.md, LICENSE dist/
+          Compress-Archive -Path dist/* -DestinationPath paperloop-windows.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: paperloop-windows.zip
+
+  publish:
+    needs: [python-package, windows]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: artifacts/*
