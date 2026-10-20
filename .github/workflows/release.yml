@@ -3,12 +3,39 @@ name: Release
 on:
   push:
     tags: ["v*"]
+    # bumping __version__ on main releases it: the workflow creates the tag and the release itself
+    branches: [main]
+    paths: ["paperloop/__init__.py"]
+  workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.v.outputs.tag }}
+      release: ${{ steps.v.outputs.release }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: v
+        run: |
+          VER=$(python3 -c "import re; print(re.search(r'__version__ = \"(.+?)\"', open('paperloop/__init__.py').read()).group(1))")
+          TAG="v$VER"
+          RELEASE=true
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
+            TAG="$GITHUB_REF_NAME"
+          elif git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null 2>&1; then
+            echo "tag $TAG already exists, nothing to release"
+            RELEASE=false
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "release=$RELEASE" >> "$GITHUB_OUTPUT"
+
   python-package:
+    needs: prepare
+    if: needs.prepare.outputs.release == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -24,6 +51,8 @@ jobs:
 
   windows:
     name: windows-${{ matrix.arch }}
+    needs: prepare
+    if: needs.prepare.outputs.release == 'true'
     runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
@@ -89,6 +118,8 @@ jobs:
 
   appimage:
     name: appimage-x86_64
+    needs: prepare
+    if: needs.prepare.outputs.release == 'true'
     # oldest runner image we can get, so the bundled binaries run on as many distributions as possible
     runs-on: ubuntu-22.04
     steps:
@@ -111,9 +142,9 @@ jobs:
           path: Paperloop-x86_64.AppImage
 
   publish:
-    needs: [python-package, windows, appimage]
+    needs: [prepare, python-package, windows, appimage]
     # publish whatever was built, even if one platform job (for example arm64) failed
-    if: ${{ !cancelled() && needs.python-package.result == 'success' }}
+    if: ${{ !cancelled() && needs.prepare.outputs.release == 'true' && needs.python-package.result == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
@@ -123,6 +154,9 @@ jobs:
       - run: ls -la artifacts
       - uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ needs.prepare.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          name: Paperloop ${{ needs.prepare.outputs.tag }}
           generate_release_notes: true
           fail_on_unmatched_files: false
           files: artifacts/*
