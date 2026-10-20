@@ -153,6 +153,16 @@ class AutostartTests(unittest.TestCase):
                 os.environ.pop("XDG_CONFIG_HOME", None)
 
 
+class AppImageAutostartTests(unittest.TestCase):
+    def test_uses_appimage_path_not_temp_mount(self):
+        os.environ["APPIMAGE"] = "/home/me/Apps/Paperloop-x86_64.AppImage"
+        try:
+            self.assertEqual(autostart.command(), ["/home/me/Apps/Paperloop-x86_64.AppImage", "daemon"])
+            self.assertIn("Exec=/home/me/Apps/Paperloop-x86_64.AppImage daemon", autostart.desktop_entry(autostart.command()))
+        finally:
+            os.environ.pop("APPIMAGE", None)
+
+
 @unittest.skipUnless(shutil.which("Xvfb"), "Xvfb not installed")
 class X11IntegrationTests(unittest.TestCase):
     """Real X server (Xvfb) + real Xlib calls + fake mpv: checks the window the wallpaper is drawn into."""

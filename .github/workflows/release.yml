@@ -23,21 +23,44 @@ jobs:
           path: dist/*
 
   windows:
-    runs-on: windows-latest
+    name: windows-${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { arch: x64,   runner: windows-latest,  py_arch: x64,   mpv: x86_64 }
+          - { arch: x86,   runner: windows-latest,  py_arch: x86,   mpv: i686 }
+          - { arch: arm64, runner: windows-11-arm,  py_arch: arm64, mpv: aarch64 }
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          architecture: ${{ matrix.py_arch }}
       - name: Install build tools
-        run: python -m pip install pyinstaller pystray pillow .
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pyinstaller .
+          # the tray icon is optional: a missing Pillow wheel must not break the build
+          python -m pip install pystray pillow
+          if ($LASTEXITCODE -ne 0) { Write-Host "tray dependencies unavailable, building without tray"; $global:LASTEXITCODE = 0 }
       - name: Build executables
         shell: pwsh
         run: |
-          $data = @("--add-data", "paperloop/web;paperloop/web", "--add-data", "paperloop/kde;paperloop/kde",
-                    "--hidden-import", "pystray._win32")
-          pyinstaller --noconfirm --onefile --noconsole --name paperloop @data packaging/paperloop_entry.py
-          pyinstaller --noconfirm --onefile --console --name paperloop-cli @data packaging/paperloop_entry.py
+          $data = @("--add-data", "paperloop/web;paperloop/web", "--add-data", "paperloop/kde;paperloop/kde")
+          $hidden = @()
+          python -c "import pystray, PIL" 2>$null
+          if ($LASTEXITCODE -eq 0) { $hidden = @("--hidden-import", "pystray._win32") }
+          $global:LASTEXITCODE = 0
+          pyinstaller --noconfirm --onefile --noconsole --name paperloop @data @hidden packaging/paperloop_entry.py
+          if ($LASTEXITCODE -ne 0) { throw "pyinstaller (gui) failed" }
+          pyinstaller --noconfirm --onefile --console --name paperloop-cli @data @hidden packaging/paperloop_entry.py
+          if ($LASTEXITCODE -ne 0) { throw "pyinstaller (cli) failed" }
+      - name: Smoke test the executable
+        shell: pwsh
+        run: ./dist/paperloop-cli.exe --version
       - name: Bundle mpv (best effort)
         continue-on-error: true
         shell: pwsh
@@ -45,31 +68,61 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $rel = gh api repos/shinchiro/mpv-winbuild-cmake/releases/latest | ConvertFrom-Json
-          $asset = $rel.assets | Where-Object { $_.name -match '^mpv-x86_64-\d{8}-git-.*\.7z$' } | Select-Object -First 1
-          if (-not $asset) { throw "no mpv asset found" }
+          $pattern = '^mpv-${{ matrix.mpv }}-\d{8}-git-.*\.7z$'
+          $asset = $rel.assets | Where-Object { $_.name -match $pattern } | Select-Object -First 1
+          if (-not $asset) { throw "no mpv asset matching $pattern" }
           Invoke-WebRequest $asset.browser_download_url -OutFile mpv.7z
           7z x mpv.7z -ompv-extract -y | Out-Null
           New-Item -ItemType Directory -Force dist/mpv | Out-Null
           Copy-Item mpv-extract/* dist/mpv -Recurse
-      - name: Zip
+      - name: Package
         shell: pwsh
         run: |
+          New-Item -ItemType Directory -Force out | Out-Null
+          Copy-Item dist/paperloop.exe "out/paperloop-windows-${{ matrix.arch }}.exe"
           Copy-Item README.md, LICENSE dist/
-          Compress-Archive -Path dist/* -DestinationPath paperloop-windows.zip
+          Compress-Archive -Path dist/* -DestinationPath "out/paperloop-windows-${{ matrix.arch }}.zip"
       - uses: actions/upload-artifact@v4
         with:
-          name: windows
-          path: paperloop-windows.zip
+          name: windows-${{ matrix.arch }}
+          path: out/*
+
+  appimage:
+    name: appimage-x86_64
+    # oldest runner image we can get, so the bundled binaries run on as many distributions as possible
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build with PyInstaller
+        run: |
+          python -m pip install pyinstaller .
+          pyinstaller --noconfirm --onedir --name paperloop \
+            --add-data "paperloop/web:paperloop/web" --add-data "paperloop/kde:paperloop/kde" \
+            packaging/paperloop_entry.py
+          ./dist/paperloop/paperloop --version
+      - name: Build AppImage
+        run: ARCH=x86_64 packaging/build-appimage.sh dist/paperloop
+      - uses: actions/upload-artifact@v4
+        with:
+          name: appimage-x86_64
+          path: Paperloop-x86_64.AppImage
 
   publish:
-    needs: [python-package, windows]
+    needs: [python-package, windows, appimage]
+    # publish whatever was built, even if one platform job (for example arm64) failed
+    if: ${{ !cancelled() && needs.python-package.result == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
         with:
           path: artifacts
           merge-multiple: true
+      - run: ls -la artifacts
       - uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
+          fail_on_unmatched_files: false
           files: artifacts/*

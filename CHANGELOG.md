@@ -9,4 +9,5 @@ First release.
 - Multi-monitor assignments, playlists (interval, shuffle, time of day).
 - Auto-pause on fullscreen/maximized apps, on battery, and per-app rules.
 - Local web UI, CLI, autostart, optional tray icon.
+- Release downloads: Windows x64, x86 and arm64 (zip with exe and mpv, plus single exe), Linux x86_64 AppImage, Python wheel/sdist.
 - Known gaps: no web/scene wallpapers, no fullscreen detection on KDE Wayland, Windows and Wayland backends not yet verified on real hardware.

@@ -12,6 +12,9 @@ VALUE = "Paperloop"
 
 
 def command() -> list[str]:
+    appimage = os.environ.get("APPIMAGE")  # inside an AppImage sys.executable is a temporary mount
+    if appimage:
+        return [appimage, "daemon"]
     if getattr(sys, "frozen", False):
         return [sys.executable, "daemon"]
     return [sys.executable, "-m", "paperloop", "daemon"]

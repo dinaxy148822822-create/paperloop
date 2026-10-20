@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Paperloop
+Comment=Free live wallpaper player
+Exec=paperloop
+Icon=paperloop
+Categories=Utility;
+Terminal=false

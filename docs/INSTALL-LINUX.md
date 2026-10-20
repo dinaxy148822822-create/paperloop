@@ -81,6 +81,19 @@ Optional tray icon: `pipx inject paperloop pystray pillow` (needs a system tray;
 
 Update later with `pipx upgrade paperloop`; remove with `pipx uninstall paperloop`.
 
+### Alternative: the AppImage (no Python needed)
+
+Download `Paperloop-x86_64.AppImage` from the [Releases](https://github.com/dinaxy148822822-create/paperloop/releases) page, then:
+
+```bash
+chmod +x Paperloop-x86_64.AppImage
+./Paperloop-x86_64.AppImage doctor     # same commands as `paperloop`
+./Paperloop-x86_64.AppImage            # start
+./Paperloop-x86_64.AppImage autostart enable
+```
+
+It still needs **mpv** (and `xprop`/`xrandr` on X11) from your distribution, section 2 above, but not Python or pipx. If it will not start with a FUSE error, install `libfuse2` (Ubuntu/Debian: `sudo apt install libfuse2`; on Ubuntu 24.04 the package is `libfuse2t64`) or run it with `APPIMAGE_EXTRACT_AND_RUN=1 ./Paperloop-x86_64.AppImage`. It is built for x86_64 only.
+
 ## 4. Hyprland, Sway and other wlroots compositors
 
 Paperloop uses [mpvpaper](https://github.com/GhostNaN/mpvpaper). It is not in the default Debian/Ubuntu/Fedora repositories.

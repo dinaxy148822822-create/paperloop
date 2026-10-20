@@ -48,9 +48,21 @@ paperloop doctor                                # tells you what is missing
 
 There is also a `PKGBUILD` in `packaging/` for `makepkg -si`.
 
+**AppImage:** `Paperloop-x86_64.AppImage` on the [Releases](../../releases) page runs without installing Python or Paperloop: `chmod +x Paperloop-x86_64.AppImage && ./Paperloop-x86_64.AppImage`. It does not bundle mpv, so install mpv (and `xprop` on X11) from your distribution first. Extra commands work too, e.g. `./Paperloop-x86_64.AppImage doctor`.
+
 ### Windows 10/11
 
-Download `paperloop-windows.zip` from the [Releases](../../releases) page, unzip it anywhere and run `paperloop.exe`. The zip bundles mpv when the release build could fetch it; otherwise install mpv (`winget install mpv`) or put `mpv.exe` next to `paperloop.exe`.
+Download from the [Releases](../../releases) page. Pick the build for your PC:
+
+| File | For |
+| --- | --- |
+| `paperloop-windows-x64.zip` | normal 64-bit PCs (most people) |
+| `paperloop-windows-x86.zip` | 32-bit Windows |
+| `paperloop-windows-arm64.zip` | ARM PCs (Snapdragon, Copilot+ PCs) |
+
+Unzip anywhere and run `paperloop.exe`. The zip contains `paperloop.exe` (no console window) and `paperloop-cli.exe` (for the command-line options below), and bundles mpv when the release build could fetch it. If there is no `mpv` folder in the zip, install mpv (`winget install mpv`) or put `mpv.exe` next to `paperloop.exe`. The single `paperloop-windows-<arch>.exe` files on the release page are the same program without mpv.
+
+Windows SmartScreen may warn about an unrecognized app because the executables are not code-signed; choose "More info", then "Run anyway".
 
 From source: `pip install .[tray]` then `python -m paperloop`.
 
