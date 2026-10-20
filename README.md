@@ -30,10 +30,14 @@ GNOME on Wayland has no desktop-background API for video; log in with "GNOME on 
 
 You need [mpv](https://mpv.io). Paperloop uses it to decode and draw.
 
-### CachyOS / Arch
+### Linux (all distributions)
+
+Full step-by-step guides for **Ubuntu, Debian, Mint, Fedora, openSUSE, Arch/CachyOS and others**, including Wayland notes and troubleshooting, are in **[docs/INSTALL-LINUX.md](docs/INSTALL-LINUX.md)**.
+
+Quick start on CachyOS / Arch:
 
 ```bash
-sudo pacman -S mpv python-pipx xorg-xprop      # xprop is for fullscreen detection on X11
+sudo pacman -S mpv python-pipx xorg-xprop xorg-xrandr   # xprop: fullscreen detection, xrandr: monitors (X11)
 pipx install git+https://github.com/dinaxy148822822-create/paperloop
 paperloop doctor                                # tells you what is missing
 ```
